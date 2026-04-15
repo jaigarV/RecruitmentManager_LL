@@ -1,9 +1,9 @@
-local rm = core:get_static_object("recruitment_manager") 
+local rm = core:get_static_object("recruitment_manager")
 --# assume rm: RECRUITER_MANAGER
 
 
 rm:create_path_set(
-    "CharBoundHordeWithGlobal", 
+    "CharBoundHordeWithGlobal",
     {
         ["local_with_scroll"] = {"units_panel", "main_units_panel", "recruitment_docker", "recruitment_options", "recruitment_listbox", "recruitment_pool_list", "list_clip", "list_box", "local1", "unit_list", "listview", "list_clip", "list_box"},
         ["global_with_scroll"] = {"units_panel", "main_units_panel", "recruitment_docker", "recruitment_options", "recruitment_listbox", "recruitment_pool_list", "list_clip", "list_box", "global", "unit_list", "listview", "list_clip", "list_box"},
@@ -23,7 +23,7 @@ rm:create_path_set(
 )
 
 rm:create_path_set(
-    "CharBoundHordeNoScroll", 
+    "CharBoundHordeNoScroll",
     {
         ["local_no_scroll"] = {"units_panel", "main_units_panel", "recruitment_docker", "recruitment_options", "recruitment_listbox", "local1", "unit_list", "listview", "list_clip", "list_box"},
         ["global_no_scroll"] =  {"units_panel", "main_units_panel", "recruitment_docker", "recruitment_options", "recruitment_listbox", "global", "unit_list", "listview", "list_clip", "list_box"},
@@ -149,6 +149,56 @@ rm:set_group_prefix_for_subculture("wh_main_sc_ksl_kislev", "emp")
 rm:set_group_prefix_for_subculture("wh_main_sc_grn_savage_orcs", "grn")
 
 
+-----------------------------------------------
+----LEGENDARY LORD BONUS POINTS SETUP----------
+-----------------------------------------------
+
+-- Generic (non-legendary) lord subtypes per race.
+-- Any lord whose subtype is NOT in this list is treated as a legendary lord.
+local generic_lord_subtypes = {
+    -- Empire
+    "wh_main_emp_lord",
+    -- Dwarfs
+    "wh_main_dwf_lord",
+    -- Vampire Counts
+    "wh_main_vmp_lord",
+    -- Greenskins
+    "wh_main_grn_lord",
+    -- Bretonnia
+    "wh_main_brt_lord",
+    -- Warriors of Chaos
+    "wh_main_chs_lord",
+    -- Beastmen
+    "wh_dlc03_bst_lord",
+    -- Wood Elves
+    "wh_dlc05_wef_lord",
+    -- Norsca
+    "wh_dlc08_nor_lord",
+    -- Lizardmen
+    "wh2_main_lzd_lord",
+    -- Skaven
+    "wh2_main_skv_lord",
+    -- High Elves
+    "wh2_main_hef_prince",
+    -- Dark Elves
+    "wh2_main_def_lord",
+    -- Tomb Kings
+    "wh2_dlc09_tmb_lord",
+    -- Vampire Coast (generic admirals)
+    "wh2_dlc11_cst_admiral",
+    "wh2_dlc11_cst_admiral_tech_01",
+    "wh2_dlc11_cst_admiral_tech_02",
+    "wh2_dlc11_cst_admiral_tech_03",
+    "wh2_dlc11_cst_admiral_tech_04"
+}--:vector<string>
+
+for i = 1, #generic_lord_subtypes do
+    rm:add_generic_lord_subtype(generic_lord_subtypes[i])
+end
+
+-- Legendary lords get this many EXTRA points on top of the base limit.
+-- Set to 0 to disable the bonus.
+rm:set_legendary_lord_bonus(3, 2) -- +3 special, +2 rare
 
 
 local main_unit_to_land_units = {
@@ -241,7 +291,7 @@ local main_unit_to_land_units = {
     ["wh2_main_lzd_cav_cold_one_spearmen_1"] = "wh2_main_lzd_cav_cold_one_spearriders_1",
     ["wh2_main_lzd_cav_horned_ones_0_nakai"] = "wh2_main_lzd_cav_horned_ones_0",
     ["wh2_main_lzd_inf_temple_guards_nakai"] = "wh2_main_lzd_inf_temple_guards",
-    ["wh2_main_lzd_mon_kroxigors_nakai"] = "wh2_main_lzd_mon_kroxigors"    
+    ["wh2_main_lzd_mon_kroxigors_nakai"] = "wh2_main_lzd_mon_kroxigors"
 }--:map<string, string>
 
 rm:add_post_setup_callback(function()

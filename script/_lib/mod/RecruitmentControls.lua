@@ -4,7 +4,7 @@ If you're trying to understand the mod, start here.
 Subobjects:
     RECRUITER_CHARACTERs: hold info about what units a force has in army and queue and logic for determining whether a recruitment option should be allowed.
     RECRUITER_UNITs: hold info about the groups and weight of a unit.
-    RECRUITER_PATHSETs: hold info about the UI paths to take when searching for UI components to apply restrictions to. 
+    RECRUITER_PATHSETs: hold info about the UI paths to take when searching for UI components to apply restrictions to.
 
     When a unit key is added to the caps system, a RECRUITER_UNIT: rec_unit is created to represent them.
         This unit is stored in the RM object.
@@ -25,14 +25,14 @@ Subobjects:
         Remove or add units, or refresh queues and armies, to make sure that rec_char has an accurate picture of the army.
         Use the path_set attached to the rec_char to find the UI unit cards of the available recruitment options for that unit.
         Ask rec_char whether each unit is available.
-        Construct a helpful explaination string and enforce the restrictions to the UI. 
+        Construct a helpful explaination string and enforce the restrictions to the UI.
     Which units get enforced after an event depends on the event:
         For events like opening the recruitment panel, all units get enforced.
-        For events which change the status of a single unit, such as adding or removing from queue, all the units which share a group with the unit being changed are enforced. 
+        For events which change the status of a single unit, such as adding or removing from queue, all the units which share a group with the unit being changed are enforced.
 
     AI enforcement is implemented seperately using grant and remove unit commands to adjust AI armies.
     A "Meter" summarizes cap information for the player and is updated by an event which we trigger after cap enforcement.
-    
+
 
 --]]
 --# assume debug.getinfo: function(WHATEVER) --> map<string, string>
@@ -68,7 +68,7 @@ local function RCSESSIONLOG()
     local popLog = io.open("warhammer_expanded_log.txt","w+")
     popLog :write("NEW LOG ["..logTimeStamp.."] \n")
     popLog :flush()
-    popLog :close() 
+    popLog :close()
 end
 RCSESSIONLOG()
 
@@ -89,14 +89,14 @@ function error_check()
         --RCLOG("safeCall end");
         return result;
     end
-    
+
     --local oldTriggerEvent = core.trigger_event;
-    
+
     --v [NO_CHECK] function(...: any)
     function pack2(...) return {n=select('#', ...), ...} end
     --v [NO_CHECK] function(t: vector<WHATEVER>) --> vector<WHATEVER>
     function unpack2(t) return unpack(t, 1, t.n) end
-    
+
     --v [NO_CHECK] function(f: function(), argProcessor: function()) --> function()
     function wrapFunction(f, argProcessor)
         return function(...)
@@ -113,12 +113,12 @@ function error_check()
             return unpack2(result);
             end
     end
-    
+
     -- function myTriggerEvent(event, ...)
     --     local someArguments = { ... }
     --     safeCall(function() oldTriggerEvent(event, unpack( someArguments )) end);
     -- end
-    
+
     --v [NO_CHECK] function(fileName: string)
     function tryRequire(fileName)
         local loaded_file = loadfile(fileName);
@@ -133,7 +133,7 @@ function error_check()
             RCLOG("Load end")
         end
     end
-    
+
     --v [NO_CHECK] function(f: function(), name: string)
     function logFunctionCall(f, name)
         return function(...)
@@ -141,7 +141,7 @@ function error_check()
             return f(...);
         end
     end
-    
+
     --v [NO_CHECK] function(object: any)
     function logAllObjectCalls(object)
         local metatable = getmetatable(object);
@@ -165,11 +165,11 @@ function error_check()
             end
         end
     end
-    
+
     -- logAllObjectCalls(core);
     -- logAllObjectCalls(cm);
     -- logAllObjectCalls(game_interface);
-    
+
     core.trigger_event = wrapFunction(
         core.trigger_event,
         function(ab)
@@ -180,7 +180,7 @@ function error_check()
             --RCLOG("Trigger event: " .. ab[1])
         end
     );
-    
+
     cm.check_callbacks = wrapFunction(
         cm.check_callbacks,
         function(ab)
@@ -190,7 +190,7 @@ function error_check()
             --end
         end
     )
-    
+
     local currentAddListener = core.add_listener;
     --v [NO_CHECK] function(core: any, listenerName: any, eventName: any, conditionFunc: any, listenerFunc: any, persistent: any)
     function myAddListener(core, listenerName, eventName, conditionFunc, listenerFunc, persistent)
@@ -233,7 +233,7 @@ end
 
 
 
-local recruiter_manager = {} 
+local recruiter_manager = {}
 --# assume recruiter_manager: RECRUITER_MANAGER
 
 
@@ -271,7 +271,7 @@ function recruiter_manager.init(supress_log)
     --stores recruiter characters in some structures that are useful.
     self._recruiterCharacters =  {} --:map<CA_CQI, RECRUITER_CHARACTER>
     self._factionRecCharacters = {} --:map<string, map<CA_CQI, RECRUITER_CHARACTER>>
-    --stores the current player character. 
+    --stores the current player character.
     self._UICurrentCharacter = nil --:CA_CQI
 
     --Group UI names
@@ -292,6 +292,11 @@ function recruiter_manager.init(supress_log)
     self._specialPointLimit = 10 --:int
     self._rarePointLimit = 5 --:int
 
+    --legendary lord bonus points
+    self._llSpecialBonus = 0 --:int
+    self._llRareBonus = 0 --:int
+    self._genericLordSubtypes = {} --:map<string, boolean>
+
     --this is used to find which groups we should be displaying on the meter UI, and as a helper when adding loaned units.
     self._subculturePrefixes = {} --:map<string, string>
 
@@ -309,7 +314,7 @@ function recruiter_manager.init(supress_log)
 end
 
 --log text
---v function(self: RECRUITER_MANAGER, text: any, echo: boolean?) 
+--v function(self: RECRUITER_MANAGER, text: any, echo: boolean?)
 function recruiter_manager.log(self, text, echo)
     if self.supress_log then
         return
@@ -364,11 +369,11 @@ end
 function recruiter_manager.set_ui_name_for_group(self, groupID, UIname)
     if not is_string(groupID) then
         self:log("ERROR: set_ui_name_for_group called but the provided group name is not a string!")
-        return 
+        return
     end
     if not is_string(UIname) then
         self:log("ERROR: set_ui_name_for_group called but the provided unit key is not a string!")
-        return 
+        return
     end
     self._UIGroupNames[groupID] = UIname
 end
@@ -388,7 +393,7 @@ cm:load_global_script("recruiter_pathset")
 --------------------------
 
 
---v function(self: RECRUITER_MANAGER,pathID: string, paths: map<string, vector<string>>, merc_path: vector<string>, conditional_tests: (function(rec_char: RECRUITER_CHARACTER) --> vector<string>)?) 
+--v function(self: RECRUITER_MANAGER,pathID: string, paths: map<string, vector<string>>, merc_path: vector<string>, conditional_tests: (function(rec_char: RECRUITER_CHARACTER) --> vector<string>)?)
 function recruiter_manager.create_path_set(self, pathID, paths, merc_path, conditional_tests)
     local new_path = recruiter_pathset.new_path(paths, merc_path, conditional_tests)
     self._UIPaths[pathID] = new_path
@@ -516,7 +521,7 @@ function recruiter_manager.set_current_character(self, cqi)
     self._UICurrentCharacter = cqi
     if not self:has_character(cqi) then
         return self:new_character(cqi), true
-    else 
+    else
         return self:get_character_by_cqi(cqi), false
     end
 end
@@ -528,7 +533,7 @@ end
 --------------------------------------------------
 -----------LOGGING OUTPUT FOR SUBOJBECTS----------
 --------------------------------------------------
---v function(self: RECRUITER_MANAGER, rec_char: RECRUITER_CHARACTER) 
+--v function(self: RECRUITER_MANAGER, rec_char: RECRUITER_CHARACTER)
 function recruiter_manager.output_state(self, rec_char)
     if not __write_output_to_logfile then
         return
@@ -746,7 +751,7 @@ function recruiter_manager.enforce_ui_restriction_on_unit(self, rec_unit)
         return
     end
     local unitID = rec_unit._key
-    
+
     --check if merc is open
     local path_to_mercs = pathset:mercenary_path()
     local mercenaryRecruitmentList = find_uicomponent_from_table(core:get_ui_root(), path_to_mercs);
@@ -760,7 +765,7 @@ function recruiter_manager.enforce_ui_restriction_on_unit(self, rec_unit)
         --if we got the unit card, proceed
         if is_uicomponent(unitCard) then
             self:enforce_caps_on_unit_uic(unitID, unitCard, rec_char)
-        else 
+        else
             --do nothing
         end
     end
@@ -779,7 +784,7 @@ function recruiter_manager.enforce_ui_restriction_on_unit(self, rec_unit)
             if is_uicomponent(unitCard) then
                 --first, check if the unit is supposed to be visible.
                 self:enforce_caps_on_unit_uic(unitID, unitCard, rec_char)
-            else 
+            else
                 --do nothing
             end
         end
@@ -802,7 +807,7 @@ function recruiter_manager.enforce_all_units_on_current_character(self)
         self:enforce_ui_restriction_on_unit(rec_char:get_unit(unit_key))
     end
     for unit_key, restricted in pairs(char_queue) do
-        self:enforce_ui_restriction_on_unit(rec_char:get_unit(unit_key))  
+        self:enforce_ui_restriction_on_unit(rec_char:get_unit(unit_key))
     end
 end
 
@@ -819,7 +824,7 @@ function recruiter_manager.enforce_unit_and_grouped_units(self, unitID, rec_char
     self:enforce_ui_restriction_on_unit(unit)
     for groupID, _ in pairs(unit:groups()) do
         local grouped_units = self:get_units_in_group(groupID)
-        for i = 1, #grouped_units do 
+        for i = 1, #grouped_units do
             if (grouped_units[i] ~= unitID) then
             local grouped_unit = rec_char:get_unit(grouped_units[i])
             self:enforce_ui_restriction_on_unit(grouped_unit)
@@ -833,7 +838,7 @@ end
 ---------------------
 
 --handlers for unit upgrade mechanics added by mods.
---units trigger UnitDisbanded when destroyed through the UI. 
+--units trigger UnitDisbanded when destroyed through the UI.
 --the grant_unit command is wrapped to pick up units added from script.
 --v function(self: RECRUITER_MANAGER, character_cqi: CA_CQI, unitID: string, upgradedUnitID: string) --> boolean
 function recruiter_manager.can_upgrade_unit_to_unit(self, character_cqi, unitID, upgradedUnitID)
@@ -1023,7 +1028,7 @@ function recruiter_manager.add_ai_units_for_subculture_with_table(self, subcultu
         self._AIDefaultUnits[subculture] = {}
     else
         if default then
-            return 
+            return
         end
     end
     for i = 1, #units do
@@ -1064,7 +1069,7 @@ function recruiter_manager.add_subtype_filter_for_unit_override(self, subtype_ke
         return
     end
     self._overrideSubtypeFilters[subtype_key] = self._overrideSubtypeFilters[subtype_key] or {}
-    table.insert(self._overrideSubtypeFilters[subtype_key], abstractionID) 
+    table.insert(self._overrideSubtypeFilters[subtype_key], abstractionID)
 end
 
 --v function(self: RECRUITER_MANAGER, subtype_key: string, skill_key: string, abstractionID: string)
@@ -1107,6 +1112,26 @@ function recruiter_manager.add_trait_requirement_for_unit_override(self, subtype
 end
 
 
+-------------------------------------------
+----LEGENDARY LORD BONUS POINTS API--------
+-------------------------------------------
+
+--v function(self: RECRUITER_MANAGER, special_bonus: number, rare_bonus: number)
+function recruiter_manager.set_legendary_lord_bonus(self, special_bonus, rare_bonus)
+    self._llSpecialBonus = special_bonus or 0
+    self._llRareBonus = rare_bonus or 0
+end
+
+--v function(self: RECRUITER_MANAGER, subtype_key: string)
+function recruiter_manager.add_generic_lord_subtype(self, subtype_key)
+    self._genericLordSubtypes[subtype_key] = true
+end
+
+--v function(self: RECRUITER_MANAGER, subtype_key: string) --> boolean
+function recruiter_manager.is_legendary_lord_subtype(self, subtype_key)
+    return not self._genericLordSubtypes[subtype_key]
+end
+
 --v function(self: RECRUITER_MANAGER, callback: function())
 function recruiter_manager.add_post_setup_callback(self, callback)
     table.insert(self._postSetupCallbacks, callback)
@@ -1122,7 +1147,7 @@ end
 ----------------------
 
 --these still function normally, they just warn the modder
---v [NO_CHECK] function(self: RECRUITER_MANAGER, subtype: string) 
+--v [NO_CHECK] function(self: RECRUITER_MANAGER, subtype: string)
 function recruiter_manager.register_subtype_as_char_bound_horde(self, subtype)
     self:log("register_subtype_as_char_bound_horde called from an API script!")
     self:log("WARNING: This API method is incomplete: It doesn't really capture all cases and more setup is sometimes involved getting custom char bound hordes to work!")
@@ -1131,13 +1156,13 @@ function recruiter_manager.register_subtype_as_char_bound_horde(self, subtype)
 end
 
 --these don't do anything, they just warn the modder
---v [NO_CHECK] function(self: RECRUITER_MANAGER, ...:any) 
+--v [NO_CHECK] function(self: RECRUITER_MANAGER, ...:any)
 function recruiter_manager.add_subtype_group_override(self, ...)
     self:log("OUTDATED API METHOD add_subtype_group_override")
 end
 
 --these don't do anything, they just warn the modder
---v [NO_CHECK] function(self: RECRUITER_MANAGER, ...:any) 
+--v [NO_CHECK] function(self: RECRUITER_MANAGER, ...:any)
 function recruiter_manager.whitelist_unit_for_subculture(self, ...)
     self:log("OUTDATED API METHOD whitelist_unit_for_subculture")
 end
@@ -1175,7 +1200,7 @@ local function init_mct(rm)
 end
 
 
---institation 
+--institation
 --this file loads in front end and battle but we only want things to happen in campaign.
 if __game_mode == __lib_type_campaign then
     --if we are logging, turn on error checking
@@ -1250,7 +1275,7 @@ if __game_mode == __lib_type_campaign then
         end,
         true)
 
-    --these functions handle and save any skills which are relevant to override units. 
+    --these functions handle and save any skills which are relevant to override units.
     local RECIEVED_SKILLS = {} --:map<string, vector<string>>
 
     --v function(cqi: CA_CQI, skill: string)
@@ -1267,7 +1292,7 @@ if __game_mode == __lib_type_campaign then
         local cqi = tonumber(cqi_as_string) --# assume cqi: CA_CQI
         local char = cm:get_character_by_cqi(cqi)
         local subtype = char:character_subtype_key()
-        local overrides = rm._overrideSkillRequirements[subtype] 
+        local overrides = rm._overrideSkillRequirements[subtype]
         local skills = RECIEVED_SKILLS[tostring(cqi)]
         for i = 1, #skills do
             local skill = skills[i]
@@ -1301,7 +1326,7 @@ if __game_mode == __lib_type_campaign then
         function(context)
             local char = context:character() --:CA_CHAR
             local subtype = char:character_subtype_key()
-            local overrides = rm._overrideSkillRequirements[subtype] 
+            local overrides = rm._overrideSkillRequirements[subtype]
             local skill = context:skill_point_spent_on()
             local abstractionID = overrides[skill]
             local abstraction = rm._overrideUnits[abstractionID]
@@ -1313,21 +1338,21 @@ if __game_mode == __lib_type_campaign then
         end,
         true
     )
-    
+
     --this is a wrapper for game_interface:grant_unit_to_character that adds the unit to the rec_character's army when it is called.
     --helps make the mod compatible with mods which are using this command - ex unit upgrades
-    --v function(cm: CM, char_string: string, unit_key: string) 
+    --v function(cm: CM, char_string: string, unit_key: string)
     function new_grant_unit(cm, char_string, unit_key)
         local ok, err = pcall(function()
             if not is_string(char_string) then
                 script_error("ERROR: grant_unit_to_character() called but supplied value char_string [" .. tostring(char_string) .. "] is not a string")
-                return 
+                return
             end
             if not is_string(unit_key) then
                 script_error("ERROR: grant_unit_to_character() called but supplied value unit_key [" .. tostring(unit_key) .. "] is not a string")
-                return 
+                return
             end
-            cm.game_interface:grant_unit_to_character(char_string, unit_key)    
+            cm.game_interface:grant_unit_to_character(char_string, unit_key)
             if string.find(char_string, "cqi:") then
                 local cqi = tonumber(getnumbersfromtext(char_string)) --# assume cqi: CA_CQI
                 local character = cm:get_character_by_cqi(cqi)
@@ -1399,7 +1424,7 @@ if __game_mode == __lib_type_campaign then
                     else
                         local info = rm._overriddenUnitSettings[groups_table[i][1]]
                         units_already_added[groups_table[i][1]] = true
-                        rm:log("Overwrote "..groups_table[i][1].." in the tabletop caps system!")      
+                        rm:log("Overwrote "..groups_table[i][1].." in the tabletop caps system!")
                         rm:add_unit_to_group(info[1],info[2])
                         local override = unit_text_overrides[info[1]]
                         if override then
@@ -1412,26 +1437,26 @@ if __game_mode == __lib_type_campaign then
                             })
                         elseif string.find(info[2], "special") then
                             local weight = info[3] --# assume weight: number
-                            local textstring = fill_loc(loc_unit_cost, loc_special) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._specialPointLimit), loc_points, loc_special) 
+                            local textstring = fill_loc(loc_unit_cost, loc_special) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._specialPointLimit), loc_points, loc_special)
                             rm:set_ui_profile_for_unit(info[1], {
                                 _text = textstring,
                                 _image = "ui/custom/recruitment_controls/special_units_"..weight..".png"
                             })
                         elseif string.find(info[2], "rare") then
                             local weight = info[3] --# assume weight: number
-                            local textstring = fill_loc(loc_unit_cost, loc_rare) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._rarePointLimit), loc_points, loc_rare) 
+                            local textstring = fill_loc(loc_unit_cost, loc_rare) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._rarePointLimit), loc_points, loc_rare)
                             rm:set_ui_profile_for_unit(info[1], {
                                 _text = textstring,
                                 _image = "ui/custom/recruitment_controls/rare_units_"..weight..".png"
                             })
                         end
-                    end        
+                    end
                 elseif units_already_added[groups_table[i][1]] then
                     rm:log("CONTENT WARNING: "..groups_table[i][1].." is added to the system twice!")
                 else
                     units_already_added[groups_table[i][1]] = true
                     rm:log("Added "..groups_table[i][1].." to the tabletop caps system")
-                
+
                     rm:add_unit_to_group(groups_table[i][1], groups_table[i][2])
                     local override = unit_text_overrides[groups_table[i][1]]
                     if override then
@@ -1444,14 +1469,14 @@ if __game_mode == __lib_type_campaign then
                         })
                     elseif string.find(groups_table[i][2], "special") then
                         local weight = groups_table[i][3] --# assume weight: number
-                        local textstring = fill_loc(loc_unit_cost, loc_special) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._specialPointLimit), loc_points, loc_special) 
+                        local textstring = fill_loc(loc_unit_cost, loc_special) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._specialPointLimit), loc_points, loc_special)
                         rm:set_ui_profile_for_unit(groups_table[i][1], {
                             _text = textstring,
                             _image = "ui/custom/recruitment_controls/special_units_"..weight..".png"
                         })
                     elseif string.find(groups_table[i][2], "rare") then
                         local weight = groups_table[i][3] --# assume weight: number
-                        local textstring = fill_loc(loc_unit_cost, loc_rare) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._rarePointLimit), loc_points, loc_rare) 
+                        local textstring = fill_loc(loc_unit_cost, loc_rare) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._rarePointLimit), loc_points, loc_rare)
                         rm:set_ui_profile_for_unit(groups_table[i][1], {
                             _text = textstring,
                             _image = "ui/custom/recruitment_controls/rare_units_"..weight..".png"
@@ -1473,20 +1498,20 @@ if __game_mode == __lib_type_campaign then
                     sc_was_table = true
                 end
                 --# assume subcultures: vector<string>
-                rm:log(current_entry[1].." is being loaned by "..tostring(#subcultures).. " subcultures") 
+                rm:log(current_entry[1].." is being loaned by "..tostring(#subcultures).. " subcultures")
                 local weight = current_entry[4] or 1
                 for j = 1, #subcultures do
                     local subculture = subcultures[j]
                     local prefix = rm._subculturePrefixes[subculture]
                     local abstractionID = current_entry[1].."_"..subculture
                     local override_unit = rm:create_unit_override(current_entry[1], abstractionID)
-                    override_unit:set_unit_weight(weight)   
+                    override_unit:set_unit_weight(weight)
                     if string.find(loaned_units_table[i][3], "core") then
                         local group = prefix.."_core"
                         override_unit:add_group_to_unit(group)
                         groups[group] = true
                         local textstring = fill_loc(loc_unit_no_cost, loc_core) .. " \n" ..fill_loc(loc_unlimited, loc_core)
-                        rm:set_ui_profile_for_unit_override(abstractionID, 
+                        rm:set_ui_profile_for_unit_override(abstractionID,
                             textstring,
                             "ui/custom/recruitment_controls/common_units.png"
                         )
@@ -1494,8 +1519,8 @@ if __game_mode == __lib_type_campaign then
                         local group = prefix.."_special"
                         override_unit:add_group_to_unit(group)
                         groups[group] = true
-                        local textstring = fill_loc(loc_unit_cost, loc_special) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._specialPointLimit), loc_points, loc_special) 
-                        rm:set_ui_profile_for_unit_override(abstractionID, 
+                        local textstring = fill_loc(loc_unit_cost, loc_special) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._specialPointLimit), loc_points, loc_special)
+                        rm:set_ui_profile_for_unit_override(abstractionID,
                             textstring,
                             "ui/custom/recruitment_controls/special_units_"..weight..".png"
                         )
@@ -1503,14 +1528,14 @@ if __game_mode == __lib_type_campaign then
                         local group = prefix.."_rare"
                         override_unit:add_group_to_unit(group)
                         groups[group] = true
-                        local textstring = fill_loc(loc_unit_cost, loc_rare) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._rarePointLimit), loc_points, loc_rare) 
-                        rm:set_ui_profile_for_unit_override(abstractionID, 
+                        local textstring = fill_loc(loc_unit_cost, loc_rare) .. "[[col:green]] "..weight.." [[/col]]"..loc_points..". \n"..fill_loc(loc_limit, tostring(rm._rarePointLimit), loc_points, loc_rare)
+                        rm:set_ui_profile_for_unit_override(abstractionID,
                             textstring,
                             "ui/custom/recruitment_controls/rare_units_"..weight..".png"
                         )
                     end
                     rm._overrideSubcultureFilters[subculture] = rm._overrideSubcultureFilters[subculture] or {}
-                    table.insert(rm._overrideSubcultureFilters[subculture], abstractionID) 
+                    table.insert(rm._overrideSubcultureFilters[subculture], abstractionID)
                     rm:log(subculture.." loaned unit "..current_entry[1].." into group with prefix "..prefix)
                 end
             end

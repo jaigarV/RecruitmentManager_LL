@@ -19,9 +19,9 @@ function recruiter_character.new(manager, cqi)
     self._queueCounts = {} --:map<string, number> --same as above but for queues
     self._queueNum = 0 --:int
 
-    -- stores any overriden units applied to this char. 
+    -- stores any overriden units applied to this char.
     --These are thrown onto the character during the model loadup during first tick.
-    self._ownedUnits = {} --:map<string, RECRUITER_UNIT> 
+    self._ownedUnits = {} --:map<string, RECRUITER_UNIT>
 
     self._staleQueueFlag = true --:boolean -- flags for the queue needing to be refreshed entirely.
     self._staleArmyFlag = true --:boolean --flags for the army needing to be refreshed entirely.
@@ -30,7 +30,7 @@ function recruiter_character.new(manager, cqi)
     --stores how much of each category is possessed.
     self._groupCounts = {} --:map<string, number>
 
-    --this cache's the last response of this rec_char to whether a unit is restricted. 
+    --this cache's the last response of this rec_char to whether a unit is restricted.
     --it is used for logging.
     self._restrictedUnits = {} --:map<string, boolean>
 
@@ -70,7 +70,7 @@ function recruiter_character.manager(self)
 end
 
 --log text to file.
---v function(self: RECRUITER_CHARACTER, text: any) 
+--v function(self: RECRUITER_CHARACTER, text: any)
 function recruiter_character.log(self, text)
     self:manager():log(text)
 end
@@ -139,7 +139,7 @@ function recruiter_character.set_queue_stale(self)
             self:manager():change_unit_pool(unit, cm:get_character_by_cqi(self:command_queue_index()):faction():name(),  count)
         end
     end
-    self._rawQueueFlag = false 
+    self._rawQueueFlag = false
     cm:set_saved_value("RMSavedFreshness|"..tostring(self._cqi), true)
     --]]
     self._staleQueueFlag = true
@@ -168,7 +168,7 @@ end
 function recruiter_character.wipe_queue(self)
     self:log("wiped Queue for ["..tostring(self:command_queue_index()).."] ")
     --loop through the queue, setting each unit entry to 0 and refunding the points
-    for unitID, _ in pairs(self._queueCounts) do 
+    for unitID, _ in pairs(self._queueCounts) do
         local rec_unit = self:get_unit(unitID)
         for groupID, _ in pairs(rec_unit:groups()) do
             self._groupCounts[groupID] = self._groupCounts[groupID] - (rec_unit:weight()*self._queueCounts[unitID])
@@ -188,7 +188,7 @@ function recruiter_character.wipe_army(self)
         for groupID, _ in pairs(rec_unit:groups()) do
             self._groupCounts[groupID] = self._groupCounts[groupID] - (rec_unit:weight()*self._armyCounts[unitID])
         end
-        self._armyCounts[unitID] = 0 
+        self._armyCounts[unitID] = 0
     end
 end
 
@@ -197,7 +197,7 @@ end
 function recruiter_character.add_unit_to_army(self, unitID)
     if self._armyCounts[unitID] == nil then
         --if that unit hasn't been used yet, give it a default value.
-        self._armyCounts[unitID] = 0 
+        self._armyCounts[unitID] = 0
     end
     self._armyCounts[unitID] = self._armyCounts[unitID] + 1;
     local rec_unit = self:get_unit(unitID)
@@ -215,7 +215,7 @@ end
 function recruiter_character.add_unit_to_queue(self, unitID)
 
     if self._queueCounts[unitID] == nil then
-        self._queueCounts[unitID] = 0 
+        self._queueCounts[unitID] = 0
         --if that unit hasn't been used yet, give it a default value.
     end
     self._queueCounts[unitID] = self._queueCounts[unitID] + 1;
@@ -250,7 +250,7 @@ end
 --v function(self: RECRUITER_CHARACTER)
 function recruiter_character.refresh_queue(self)
     --remove the old queue before we start
-    self:wipe_queue() 
+    self:wipe_queue()
     if self._isHuman == false then
         self:set_queue_fresh()
         return
@@ -263,12 +263,12 @@ function recruiter_character.refresh_queue(self)
         self:log("Failed to find the main_units_panel UI element while refreshing the queue of ["..tostring(self:command_queue_index()).."] ")
         return
     end
-    
+
     --UI is written in C++, so we loop from 0
     for i = 0, 18 do
         --grab the unit ID from the queued unit tooltips url.
-        local unitID = self:manager():GetQueuedUnit(i, "QueuedLandUnit ") 
-        --if we find a unit successfully, add to queue. Otherwise, abort the loop. 
+        local unitID = self:manager():GetQueuedUnit(i, "QueuedLandUnit ")
+        --if we find a unit successfully, add to queue. Otherwise, abort the loop.
         if unitID then
             self:add_unit_to_queue(unitID)
         else
@@ -279,8 +279,8 @@ function recruiter_character.refresh_queue(self)
     --UI is written in C++, so we loop from 0
     for i = 0, 18 do
         --grab the unit ID from the queued unit tooltips url.
-        local unitID = self:manager():GetQueuedUnit(i, "temp_merc_") 
-        --if we find a unit successfully, add to queue. Otherwise, abort the loop. 
+        local unitID = self:manager():GetQueuedUnit(i, "temp_merc_")
+        --if we find a unit successfully, add to queue. Otherwise, abort the loop.
         if unitID then
             self:add_unit_to_queue(unitID)
         else
@@ -303,7 +303,7 @@ function recruiter_character.remove_unit_from_queue(self, unitID)
     end
     --]]
     if self._staleQueueFlag == true then
-        --if the queue is stale we shouldn't be doing anything with it. 
+        --if the queue is stale we shouldn't be doing anything with it.
         self:refresh_queue()
         return true
     end
@@ -312,8 +312,8 @@ function recruiter_character.remove_unit_from_queue(self, unitID)
         return false
     end
     if self._queueCounts[unitID] == 0 then
-        self:log("Called for the removal of unit ["..unitID.."] for the queue of ["..tostring(self:command_queue_index()).."] but the count for this unit is 0!")  
-        return false 
+        self:log("Called for the removal of unit ["..unitID.."] for the queue of ["..tostring(self:command_queue_index()).."] but the count for this unit is 0!")
+        return false
     end
     self._queueCounts[unitID] = self._queueCounts[unitID] - 1;
     self._queueNum = self._queueNum - 1;
@@ -324,7 +324,7 @@ function recruiter_character.remove_unit_from_queue(self, unitID)
     self:log("Removed unit ["..unitID.."] to the queue of ["..tostring(self:command_queue_index()).."]")
     return true
 end
-    
+
 --remove a unit from the army (used by disband listener)
 --v function(self: RECRUITER_CHARACTER, unitID: string)
 function recruiter_character.remove_unit_from_army(self, unitID)
@@ -369,7 +369,7 @@ function recruiter_character.get_unit_count_in_queue(self, unitID)
     if self:is_queue_stale() then
         --if the queue is stale, we're going to return nothing because the queue we have isn't reliable!
         self:log("get_unit_count_in_queue for called for ["..unitID.."] on character ["..tostring(self:command_queue_index()).."], but the queue is stale!")
-        return 0 
+        return 0
     end
     return self._queueCounts[unitID]
 end
@@ -473,7 +473,7 @@ function recruiter_character.get_unit_count(self, unitID)
     local queue_count = self:get_unit_count_in_queue(unitID)
     --if the army is stale, ask for a refresh
     if self:is_army_stale() then
-        self:refresh_army() 
+        self:refresh_army()
     end
     local army_count = self:get_unit_count_in_army(unitID)
     local merc_count = self:get_mercenary_count(unitID)
@@ -487,10 +487,17 @@ end
 
 --v [NO_CHECK] function(self: RECRUITER_CHARACTER, groupID: string) --> number
 function recruiter_character.get_quantity_limit_for_group(self, groupID)
-    --for now, this just returns where the default value is stored in the model for all characters.
-    --in the future, this will allow me to insert code here to add or subtract capacity based on the character's subtype, traits, skills or effects.
-    --TODO Character cap increases or penalties
-    return self:manager():get_base_quantity_limit_for_group(groupID)
+    local base = self:manager():get_base_quantity_limit_for_group(groupID)
+    local rm = self:manager()
+    local subtype = self._character:character_subtype_key()
+    if rm:is_legendary_lord_subtype(subtype) then
+        if string.find(groupID, "special") then
+            base = base + rm._llSpecialBonus
+        elseif string.find(groupID, "rare") then
+            base = base + rm._llRareBonus
+        end
+    end
+    return base
 end
 
 -------------------------------------
@@ -532,13 +539,13 @@ function recruiter_character.get_group_counts_on_character(self, groupID)
         self:refresh_army()
     end
     if self._staleQueueFlag then
-        self:refresh_queue() 
+        self:refresh_queue()
     end
     if not self._groupCounts[groupID] then
         self._groupCounts[groupID] = 0
         --set a default
     end
-    return self._groupCounts[groupID] 
+    return self._groupCounts[groupID]
 end
 
 
