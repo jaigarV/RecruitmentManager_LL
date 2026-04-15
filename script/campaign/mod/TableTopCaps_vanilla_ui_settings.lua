@@ -198,7 +198,7 @@ end
 
 -- Legendary lords get this many EXTRA points on top of the base limit.
 -- Set to 0 to disable the bonus.
-rm:set_legendary_lord_bonus(3, 2) -- +3 special, +2 rare
+rm:set_legendary_lord_bonus(2, 1) -- +2 special, +1 rare
 
 
 local main_unit_to_land_units = {

@@ -1132,6 +1132,8 @@ function recruiter_manager.is_legendary_lord_subtype(self, subtype_key)
     return not self._genericLordSubtypes[subtype_key]
 end
 
+
+
 --v function(self: RECRUITER_MANAGER, callback: function())
 function recruiter_manager.add_post_setup_callback(self, callback)
     table.insert(self._postSetupCallbacks, callback)
