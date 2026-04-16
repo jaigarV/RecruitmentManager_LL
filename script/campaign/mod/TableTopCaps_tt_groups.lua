@@ -999,11 +999,27 @@ rm:add_loaned_units_in_table(loaned_units)
 
             
 rm:add_post_setup_callback(function()
-    --this gives skrolk core plague monks
+
+    -- Skaven Legendary Lords:
+        -- Lord Skrolk
+    -- This gives skrolk core plague monks
     rm:create_unit_override("wh2_main_skv_inf_plague_monks", "core_plague_monks")
     rm:add_subtype_filter_for_unit_override("wh2_main_skv_lord_skrolk", "core_plague_monks")
     rm:set_ui_profile_for_unit_override("core_plague_monks", "[[col:yellow]]Special Rule: [[/col]] Lord Skrolk can recruit Plague Monks as Core units in his armies. \n Armies may have an unlimited number of Core Units.", "ui/custom/recruitment_controls/common_units.png")
     rm:log("Added Skrolk Special Rule")
+
+    -- Beastmen Legendary Lords:
+        -- Malagor the Dark Omen
+
+        -- Khazrak One-Eye
+        -- This gives Khazrak cheaper access to razorgor chariots
+        -- TODO: Add more special points for Khazrak to recruit more bestigors
+    rm:create_unit_override("wh_dlc03_bst_cav_razorgor_chariot_0", "khazrak_razorgor_chariot", "bst_special", 1)
+    rm:add_subtype_filter_for_unit_override("dlc03_bst_khazrak", "khazrak_razorgor_chariot")
+    rm:set_ui_profile_for_unit_override("khazrak_razorgor_chariot", "[[col:yellow]]Special Rule: [[/col]] Khazrak One-Eye can recruit Razorgor Chariots costing one less special point in his army.", "ui/custom/recruitment_controls/special_units_1.png")
+    rm:log("Added Khazrak Special Rule Razorgor Chariots")
+
+
     --this sets up the AI
     local subculture_defaults = {
         ["wh_main_sc_emp_empire"] = {"wh_dlc04_emp_inf_free_company_militia_0", "wh_main_emp_cav_empire_knights", "wh_main_emp_inf_halberdiers", "wh_main_emp_inf_handgunners", "wh_main_emp_inf_spearmen_1", "wh_main_emp_inf_swordsmen", "wh2_dlc13_emp_inf_archers_0", "wh_main_emp_inf_crossbowmen"},
